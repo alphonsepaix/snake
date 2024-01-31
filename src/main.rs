@@ -1,3 +1,5 @@
+#![allow(clippy::type_complexity)]
+
 use bevy::{prelude::*, sprite::collide_aabb::collide, window::WindowTheme};
 use rand::{thread_rng, Rng};
 
@@ -10,7 +12,7 @@ const WALL_COLOR: Color = Color::rgb(0.8, 0.8, 0.8);
 const SNAKE_SIZE: Vec3 = Vec3::new(20.0, 20.0, 0.0);
 const SNAKE_COLOR: Color = Color::rgb(0.0, 1.0, 0.0);
 const INITIAL_SNAKE_SPEED: f32 = 200.0;
-const INITIAL_SNAKE_DIRECTION: SnakeDirection = SnakeDirection::Left;
+const INITIAL_SNAKE_DIRECTION: SnakeDirection = SnakeDirection::Up;
 
 const APPLE_SIZE: Vec3 = Vec3::new(20.0, 20.0, 0.0);
 const APPLE_COLOR: Color = Color::rgb(1.0, 0.0, 0.0);
@@ -31,7 +33,7 @@ struct Scoreboard {
 }
 
 #[derive(Component)]
-struct Snake;
+struct Head;
 
 #[derive(Component)]
 struct Velocity {
@@ -79,6 +81,7 @@ fn spawn_apple(commands: &mut Commands) {
             ..default()
         },
         Apple,
+        Collider,
     ));
 }
 
@@ -159,7 +162,7 @@ fn setup(mut commands: Commands) {
             },
             ..default()
         },
-        Snake,
+        Head,
         Velocity {
             speed: INITIAL_SNAKE_SPEED,
             direction: INITIAL_SNAKE_DIRECTION,
@@ -212,7 +215,7 @@ fn update_score(mouse_input: Res<Input<MouseButton>>, mut scoreboard: ResMut<Sco
 
 fn move_snake(
     keyboard_input: Res<Input<KeyCode>>,
-    mut query: Query<(&mut Transform, &mut Velocity), With<Snake>>,
+    mut query: Query<(&mut Transform, &mut Velocity), With<Head>>,
     time: Res<Time>,
 ) {
     let (mut snake_transform, mut snake_velocity) = query.single_mut();
@@ -220,16 +223,16 @@ fn move_snake(
     use SnakeDirection::*;
     let mut direction: Option<SnakeDirection> = None;
 
-    if keyboard_input.pressed(KeyCode::P) {
+    if keyboard_input.pressed(KeyCode::Up) {
         direction = Some(Up);
     }
-    if keyboard_input.pressed(KeyCode::I) {
+    if keyboard_input.pressed(KeyCode::Down) {
         direction = Some(Down);
     }
-    if keyboard_input.pressed(KeyCode::U) {
+    if keyboard_input.pressed(KeyCode::Left) {
         direction = Some(Left);
     }
-    if keyboard_input.pressed(KeyCode::E) {
+    if keyboard_input.pressed(KeyCode::Right) {
         direction = Some(Right);
     }
 
@@ -249,10 +252,10 @@ fn move_snake(
 fn check_for_collisions(
     mut commands: Commands,
     mut scoreboard: ResMut<Scoreboard>,
-    mut snake_query: Query<(&mut Velocity, &mut Transform), With<Snake>>,
-    collider_query: Query<(Entity, &Transform, Option<&Apple>), Without<Snake>>,
+    mut snake_query: Query<&mut Transform, With<Head>>,
+    collider_query: Query<(Entity, &Transform, Option<&Apple>), (With<Collider>, Without<Head>)>,
 ) {
-    let (_, mut snake_transform) = snake_query.single_mut();
+    let mut snake_transform = snake_query.single_mut();
     let Vec2 { x, y } = snake_transform.translation.truncate();
 
     for (collider_entity, transform, maybe_apple) in &collider_query {
@@ -272,7 +275,10 @@ fn check_for_collisions(
                     bevy::sprite::collide_aabb::Collision::Left => Vec2::new(x - arena_width, y),
                     bevy::sprite::collide_aabb::Collision::Bottom => Vec2::new(x, y - arena_height),
                     bevy::sprite::collide_aabb::Collision::Top => Vec2::new(x, y + arena_height),
-                    bevy::sprite::collide_aabb::Collision::Inside => Vec2::new(x, y),
+                    bevy::sprite::collide_aabb::Collision::Inside => {
+                        dbg!(x, y);
+                        panic!();
+                    }
                 };
                 snake_transform.translation = new_pos.extend(0.0);
             } else {
@@ -305,7 +311,7 @@ fn main() {
         .add_systems(Startup, setup)
         .add_systems(
             FixedUpdate,
-            (update_score, move_snake, check_for_collisions),
+            (move_snake, check_for_collisions, update_score).chain(),
         )
         .add_systems(Update, (update_scoreboard, bevy::window::close_on_esc))
         .run();
@@ -317,11 +323,11 @@ fn gen_apple_location() -> Vec2 {
     let padding = 15.0;
     let x_min = LEFT_WALL + WALL_THICKNESS / 2.0 + padding;
     let x_max = RIGHT_WALL - WALL_THICKNESS / 2.0 - padding;
-    let y_min = BOTTOM_WALL + WALL_THICKNESS / 2.0 + padding;
-    let y_max = TOP_WALL - WALL_THICKNESS / 2.0 - padding;
+    let y_min = BOTTOM_WALL + WALL_THICKNESS / 2.0 + padding + OFFSET;
+    let y_max = TOP_WALL - WALL_THICKNESS / 2.0 - padding - OFFSET;
 
     let x = rng.gen_range(x_min..=x_max);
-    let y = rng.gen_range(y_min..=y_max) - OFFSET;
+    let y = rng.gen_range(y_min..=y_max);
 
     Vec2::new(x, y)
 }
