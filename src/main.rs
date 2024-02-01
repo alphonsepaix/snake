@@ -35,6 +35,14 @@ struct Scoreboard {
 #[derive(Component)]
 struct Head;
 
+#[derive(Debug, Resource)]
+struct SnakeBody {
+    body: Vec<Entity>,
+}
+
+#[derive(Component)]
+struct Snake;
+
 #[derive(Component)]
 struct Velocity {
     speed: f32,
@@ -163,11 +171,14 @@ fn setup(mut commands: Commands) {
             ..default()
         },
         Head,
+        Snake,
         Velocity {
             speed: INITIAL_SNAKE_SPEED,
             direction: INITIAL_SNAKE_DIRECTION,
         },
     ));
+
+    commands.insert_resource(SnakeBody { body: vec![] });
 
     // A first apple
     spawn_apple(&mut commands);
@@ -203,22 +214,14 @@ fn update_scoreboard(scoreboard: Res<Scoreboard>, mut query: Query<&mut Text>) {
     text.sections[1].value = scoreboard.value.to_string();
 }
 
-fn update_score(mouse_input: Res<Input<MouseButton>>, mut scoreboard: ResMut<Scoreboard>) {
-    if mouse_input.pressed(MouseButton::Left) {
-        scoreboard.value += 1;
-    } else if mouse_input.pressed(MouseButton::Right) {
-        scoreboard.value = scoreboard.value.saturating_sub(1);
-    } else if mouse_input.pressed(MouseButton::Middle) {
-        scoreboard.value = 0;
-    }
-}
-
 fn move_snake(
     keyboard_input: Res<Input<KeyCode>>,
-    mut query: Query<(&mut Transform, &mut Velocity), With<Head>>,
+    mut head: Query<(&mut Transform, &mut Velocity), With<Head>>,
+    mut body: Query<(&mut Transform, &Velocity), (With<Snake>, Without<Head>)>,
+    body_id: Res<SnakeBody>,
     time: Res<Time>,
 ) {
-    let (mut snake_transform, mut snake_velocity) = query.single_mut();
+    let (mut snake_transform, mut snake_velocity) = head.single_mut();
 
     use SnakeDirection::*;
     let mut direction: Option<SnakeDirection> = None;
@@ -247,6 +250,20 @@ fn move_snake(
     let direction: Vec2 = direction.into();
     snake_transform.translation.x += direction.x * speed * time.delta_seconds();
     snake_transform.translation.y += direction.y * speed * time.delta_seconds();
+
+    // For each body segment, set the transform of one segment to match the transform
+    // of the segment above
+    if !body_id.body.is_empty() {
+        for i in (0..body_id.body.len()).rev() {
+            let next_trans = if i == 0 {
+                *snake_transform
+            } else {
+                *body.component::<Transform>(body_id.body[i - 1])
+            };
+            let mut trans = body.component_mut::<Transform>(body_id.body[i]);
+            *trans = next_trans;
+        }
+    }
 }
 
 fn check_for_collisions(
@@ -254,6 +271,8 @@ fn check_for_collisions(
     mut scoreboard: ResMut<Scoreboard>,
     mut snake_query: Query<&mut Transform, With<Head>>,
     collider_query: Query<(Entity, &Transform, Option<&Apple>), (With<Collider>, Without<Head>)>,
+    mut snake: ResMut<SnakeBody>,
+    body: Query<&Transform, (With<Snake>, Without<Head>)>,
 ) {
     let mut snake_transform = snake_query.single_mut();
     let Vec2 { x, y } = snake_transform.translation.truncate();
@@ -276,7 +295,6 @@ fn check_for_collisions(
                     bevy::sprite::collide_aabb::Collision::Bottom => Vec2::new(x, y - arena_height),
                     bevy::sprite::collide_aabb::Collision::Top => Vec2::new(x, y + arena_height),
                     bevy::sprite::collide_aabb::Collision::Inside => {
-                        dbg!(x, y);
                         panic!();
                     }
                 };
@@ -286,6 +304,32 @@ fn check_for_collisions(
                 commands.entity(collider_entity).despawn();
                 spawn_apple(&mut commands);
                 scoreboard.value += 1;
+
+                let transform = if snake.body.is_empty() {
+                    *snake_transform
+                } else {
+                    let tail_id = snake.body.last().unwrap();
+                    *body.component::<Transform>(*tail_id)
+                };
+                let new_tail = commands
+                    .spawn((
+                        SpriteBundle {
+                            transform,
+                            sprite: Sprite {
+                                color: SNAKE_COLOR,
+                                ..default()
+                            },
+                            ..default()
+                        },
+                        Snake,
+                        Velocity {
+                            speed: INITIAL_SNAKE_SPEED,
+                            direction: INITIAL_SNAKE_DIRECTION,
+                        },
+                    ))
+                    .id();
+
+                snake.body.push(new_tail);
             }
         }
     }
@@ -309,10 +353,7 @@ fn main() {
         .insert_resource(Scoreboard { value: 0 })
         .insert_resource(ClearColor(BACKGROUND_COLOR))
         .add_systems(Startup, setup)
-        .add_systems(
-            FixedUpdate,
-            (move_snake, check_for_collisions, update_score).chain(),
-        )
+        .add_systems(FixedUpdate, (move_snake, check_for_collisions).chain())
         .add_systems(Update, (update_scoreboard, bevy::window::close_on_esc))
         .run();
 }
