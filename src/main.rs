@@ -2,30 +2,40 @@
 
 use bevy::{prelude::*, sprite::collide_aabb::collide, window::WindowTheme};
 use rand::{thread_rng, Rng};
+use std::ops::{Deref, DerefMut};
+
+const BACKGROUND_COLOR: Color = Color::rgb(0.05, 0.05, 0.05);
+const TILE_SIZE: Vec2 = Vec2::new(20.0, 20.0);
+const REFRESH_RATE: f32 = 8.0;
+const GRID_WIDTH: usize = 21;
+const GRID_HEIGHT: usize = 21;
 
 const SCOREBOARD_FONT_SIZE: f32 = 42.0;
-
 const TEXT_COLOR: Color = Color::rgb(0.0, 1.0, 0.0);
-const BACKGROUND_COLOR: Color = Color::rgb(0.15, 0.15, 0.15);
-const WALL_COLOR: Color = Color::rgb(0.8, 0.8, 0.8);
 
-const SNAKE_SIZE: Vec3 = Vec3::new(20.0, 20.0, 0.0);
-const SNAKE_COLOR: Color = Color::rgb(0.0, 1.0, 0.0);
-const INITIAL_SNAKE_SPEED: f32 = 200.0;
+const SNAKE_SIZE: Vec2 = Vec2::new(17.5, 17.5);
 const INITIAL_SNAKE_DIRECTION: SnakeDirection = SnakeDirection::Up;
+const HEAD_COLOR: Color = Color::rgb(0.0, 1.0, 0.0);
+const TAIL_COLOR: Color = Color::rgb(0.0, 0.8, 0.0);
 
-const APPLE_SIZE: Vec3 = Vec3::new(20.0, 20.0, 0.0);
 const APPLE_COLOR: Color = Color::rgb(1.0, 0.0, 0.0);
+const APPLE_SIZE: Vec2 = Vec2::new(12.0, 12.0);
 
 const WINDOW_WIDTH: f32 = 1100.0;
 const WINDOW_HEIGHT: f32 = 800.0;
 
-const OFFSET: f32 = 50.0;
-const LEFT_WALL: f32 = -500.0;
-const RIGHT_WALL: f32 = 500.0;
-const TOP_WALL: f32 = 250.0;
-const BOTTOM_WALL: f32 = -350.0;
-const WALL_THICKNESS: f32 = 15.0;
+const LEFT_WALL: f32 = -400.0;
+const RIGHT_WALL: f32 = 400.0;
+const TOP_WALL: f32 = 300.0;
+const BOTTOM_WALL: f32 = -300.0;
+const WALL_THICKNESS: f32 = 8.0;
+const WALL_COLOR: Color = Color::rgb(0.9, 0.9, 0.9);
+
+#[derive(Resource, Deref, DerefMut)]
+struct GameTimer(Timer);
+
+#[derive(Event, Default)]
+struct CollisionEvent;
 
 #[derive(Debug, Resource)]
 struct Scoreboard {
@@ -40,14 +50,28 @@ struct SnakeBody {
     body: Vec<Entity>,
 }
 
-#[derive(Component)]
-struct Snake;
+impl Deref for SnakeBody {
+    type Target = Vec<Entity>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.body
+    }
+}
+
+impl DerefMut for SnakeBody {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.body
+    }
+}
+
+#[derive(Deref, DerefMut, Resource)]
+struct PlayerInput(Option<SnakeDirection>);
 
 #[derive(Component)]
-struct Velocity {
-    speed: f32,
-    direction: SnakeDirection,
-}
+struct Tail;
+
+#[derive(Component, Deref, DerefMut)]
+struct Movement(SnakeDirection);
 
 #[derive(Clone, Copy)]
 enum SnakeDirection {
@@ -74,12 +98,12 @@ struct Collider;
 #[derive(Component)]
 struct Apple;
 
-fn spawn_apple(commands: &mut Commands) {
+fn spawn_apple(commands: &mut Commands, loc: Vec2) {
     commands.spawn((
         SpriteBundle {
             transform: Transform {
-                translation: gen_apple_location().extend(0.0),
-                scale: APPLE_SIZE,
+                translation: loc.extend(0.0),
+                scale: APPLE_SIZE.extend(0.0),
                 ..default()
             },
             sprite: Sprite {
@@ -115,8 +139,8 @@ impl WallLocation {
         match self {
             WallLocation::Top => Vec2::new(0.0, TOP_WALL),
             WallLocation::Bottom => Vec2::new(0.0, BOTTOM_WALL),
-            WallLocation::Left => Vec2::new(LEFT_WALL, -OFFSET),
-            WallLocation::Right => Vec2::new(RIGHT_WALL, -OFFSET),
+            WallLocation::Left => Vec2::new(LEFT_WALL, 0.0),
+            WallLocation::Right => Vec2::new(RIGHT_WALL, 0.0),
         }
     }
 }
@@ -133,7 +157,7 @@ impl WallBundle {
             sprite_bundle: SpriteBundle {
                 transform: Transform {
                     translation: location.position().extend(0.0),
-                    scale: location.size().extend(1.0),
+                    scale: location.size().extend(0.0),
                     ..default()
                 },
                 sprite: Sprite {
@@ -160,34 +184,38 @@ fn setup(mut commands: Commands) {
     commands.spawn((
         SpriteBundle {
             transform: Transform {
-                translation: Vec3::new(0.0, -OFFSET, 0.0),
-                scale: SNAKE_SIZE,
+                translation: Vec3::new(0.0, 0.0, 0.0),
+                scale: SNAKE_SIZE.extend(0.0),
                 ..default()
             },
             sprite: Sprite {
-                color: SNAKE_COLOR,
+                color: HEAD_COLOR,
                 ..default()
             },
             ..default()
         },
         Head,
-        Snake,
-        Velocity {
-            speed: INITIAL_SNAKE_SPEED,
-            direction: INITIAL_SNAKE_DIRECTION,
-        },
+        Tail,
+        Movement(INITIAL_SNAKE_DIRECTION),
     ));
 
     commands.insert_resource(SnakeBody { body: vec![] });
+    commands.insert_resource(PlayerInput(None));
 
     // A first apple
-    spawn_apple(&mut commands);
+    let location = loop {
+        let loc = gen_apple_location();
+        if loc != Vec2::splat(0.0) {
+            break loc;
+        }
+    };
+    spawn_apple(&mut commands, location);
 
     // The scoreboard
     commands.spawn(
         TextBundle::from_sections([
             TextSection::new(
-                "SCORE -- ",
+                "SCORE - ",
                 TextStyle {
                     font_size: SCOREBOARD_FONT_SIZE,
                     color: TEXT_COLOR,
@@ -202,8 +230,8 @@ fn setup(mut commands: Commands) {
         ])
         .with_style(Style {
             position_type: PositionType::Absolute,
-            top: Val::Px(50.0),
-            left: Val::Px(50.0),
+            top: Val::Px(10.0),
+            left: Val::Px(10.0),
             ..default()
         }),
     );
@@ -214,17 +242,9 @@ fn update_scoreboard(scoreboard: Res<Scoreboard>, mut query: Query<&mut Text>) {
     text.sections[1].value = scoreboard.value.to_string();
 }
 
-fn move_snake(
-    keyboard_input: Res<Input<KeyCode>>,
-    mut head: Query<(&mut Transform, &mut Velocity), With<Head>>,
-    mut body: Query<(&mut Transform, &Velocity), (With<Snake>, Without<Head>)>,
-    body_id: Res<SnakeBody>,
-    time: Res<Time>,
-) {
-    let (mut snake_transform, mut snake_velocity) = head.single_mut();
-
-    use SnakeDirection::*;
+fn handle_input(keyboard_input: Res<Input<KeyCode>>, mut player_input: ResMut<PlayerInput>) {
     let mut direction: Option<SnakeDirection> = None;
+    use SnakeDirection::*;
 
     if keyboard_input.pressed(KeyCode::Up) {
         direction = Some(Up);
@@ -239,97 +259,141 @@ fn move_snake(
         direction = Some(Right);
     }
 
-    if let Some(next_direction) = direction {
-        match (snake_velocity.direction, next_direction) {
-            (Left, Right) | (Right, Left) | (Up, Down) | (Down, Up) => (),
-            _ => snake_velocity.direction = next_direction,
-        }
+    if direction.is_some() {
+        player_input.0 = direction;
     }
+}
 
-    let Velocity { speed, direction } = *snake_velocity;
-    let direction: Vec2 = direction.into();
-    snake_transform.translation.x += direction.x * speed * time.delta_seconds();
-    snake_transform.translation.y += direction.y * speed * time.delta_seconds();
+fn move_snake(
+    time: Res<Time>,
+    mut timer: ResMut<GameTimer>,
+    player_input: Res<PlayerInput>,
+    body: Res<SnakeBody>,
+    mut head: Query<(&mut Transform, &mut Movement), With<Head>>,
+    mut tail: Query<(&mut Transform, &Movement), (With<Tail>, Without<Head>)>,
+) {
+    // let mut direction: Option<SnakeDirection> = None;
+    use SnakeDirection::*;
 
-    // For each body segment, set the transform of one segment to match the transform
-    // of the segment above
-    if !body_id.body.is_empty() {
-        for i in (0..body_id.body.len()).rev() {
-            let next_trans = if i == 0 {
-                *snake_transform
-            } else {
-                *body.component::<Transform>(body_id.body[i - 1])
-            };
-            let mut trans = body.component_mut::<Transform>(body_id.body[i]);
-            *trans = next_trans;
+    // if keyboard_input.pressed(KeyCode::Up) {
+    //     direction = Some(Up);
+    // }
+    // if keyboard_input.pressed(KeyCode::Down) {
+    //     direction = Some(Down);
+    // }
+    // if keyboard_input.pressed(KeyCode::Left) {
+    //     direction = Some(Left);
+    // }
+    // if keyboard_input.pressed(KeyCode::Right) {
+    //     direction = Some(Right);
+    // }
+
+    let (mut snake_transform, mut snake_velocity) = head.single_mut();
+
+    // if let Some(next_direction) = direction {
+    //     match (snake_velocity.0, next_direction) {
+    //         (Left, Right) | (Right, Left) | (Up, Down) | (Down, Up) => (),
+    //         _ => snake_velocity.0 = next_direction,
+    //     }
+    // }
+
+    if timer.tick(time.delta()).just_finished() {
+        if let Some(next_direction) = player_input.0 {
+            match (snake_velocity.0, next_direction) {
+                (Left, Right) | (Right, Left) | (Up, Down) | (Down, Up) => (),
+                _ => snake_velocity.0 = next_direction,
+            }
         }
+        // For each body segment, set the transform of one segment to match the transform
+        // of the segment above
+        if !body.is_empty() {
+            for i in (0..body.len()).rev() {
+                let next_trans = if i == 0 {
+                    *snake_transform
+                } else {
+                    *tail.component::<Transform>(body.body[i - 1])
+                };
+                let mut trans = tail.component_mut::<Transform>(body.body[i]);
+                *trans = next_trans;
+            }
+        }
+
+        let direction: Vec2 = Into::<Vec2>::into(snake_velocity.0);
+        snake_transform.translation.x += direction.x * TILE_SIZE.x;
+        snake_transform.translation.y += direction.y * TILE_SIZE.y;
+        snake_transform.translation.x =
+            (snake_transform.translation.x / TILE_SIZE.x).round() * TILE_SIZE.x;
+        snake_transform.translation.y =
+            (snake_transform.translation.y / TILE_SIZE.y).round() * TILE_SIZE.y;
     }
 }
 
 fn check_for_collisions(
     mut commands: Commands,
     mut scoreboard: ResMut<Scoreboard>,
-    mut snake_query: Query<&mut Transform, With<Head>>,
-    collider_query: Query<(Entity, &Transform, Option<&Apple>), (With<Collider>, Without<Head>)>,
-    mut snake: ResMut<SnakeBody>,
-    body: Query<&Transform, (With<Snake>, Without<Head>)>,
+    mut body: ResMut<SnakeBody>,
+    snake_query: Query<&mut Transform, With<Head>>,
+    collider_query: Query<
+        (Entity, &Transform, Option<&Apple>, Option<&Tail>),
+        (With<Collider>, Without<Head>),
+    >,
+    tail: Query<&Transform, (With<Tail>, Without<Head>)>,
 ) {
-    let mut snake_transform = snake_query.single_mut();
-    let Vec2 { x, y } = snake_transform.translation.truncate();
+    let snake_transform = snake_query.single();
 
-    for (collider_entity, transform, maybe_apple) in &collider_query {
+    for (collider_entity, transform, maybe_apple, maybe_tail) in &collider_query {
         let collision = collide(
             snake_transform.translation,
-            SNAKE_SIZE.truncate(),
+            TILE_SIZE,
             transform.translation,
             transform.scale.truncate(),
         );
-        if let Some(collision) = collision {
-            if maybe_apple.is_none() {
-                // Check collision with walls
-                let arena_width = RIGHT_WALL - LEFT_WALL - WALL_THICKNESS - SNAKE_SIZE.x;
-                let arena_height = TOP_WALL - BOTTOM_WALL - WALL_THICKNESS - SNAKE_SIZE.y;
-                let new_pos = match collision {
-                    bevy::sprite::collide_aabb::Collision::Right => Vec2::new(x + arena_width, y),
-                    bevy::sprite::collide_aabb::Collision::Left => Vec2::new(x - arena_width, y),
-                    bevy::sprite::collide_aabb::Collision::Bottom => Vec2::new(x, y - arena_height),
-                    bevy::sprite::collide_aabb::Collision::Top => Vec2::new(x, y + arena_height),
-                    bevy::sprite::collide_aabb::Collision::Inside => {
-                        panic!();
-                    }
-                };
-                snake_transform.translation = new_pos.extend(0.0);
-            } else {
+        if collision.is_some() {
+            if maybe_apple.is_some() {
                 // Handle collision with an apple
                 commands.entity(collider_entity).despawn();
-                spawn_apple(&mut commands);
+                let apple_loc = loop {
+                    let location = gen_apple_location();
+                    if collider_query
+                        .iter()
+                        .all(|query| query.1.translation.truncate() != location)
+                    {
+                        break location;
+                    }
+                };
+                spawn_apple(&mut commands, apple_loc);
                 scoreboard.value += 1;
 
-                let transform = if snake.body.is_empty() {
+                let transform = if body.is_empty() {
                     *snake_transform
                 } else {
-                    let tail_id = snake.body.last().unwrap();
-                    *body.component::<Transform>(*tail_id)
+                    let tail_id = body.last().unwrap();
+                    *tail.component::<Transform>(*tail_id)
                 };
                 let new_tail = commands
                     .spawn((
                         SpriteBundle {
                             transform,
                             sprite: Sprite {
-                                color: SNAKE_COLOR,
+                                color: TAIL_COLOR,
                                 ..default()
                             },
                             ..default()
                         },
-                        Snake,
-                        Velocity {
-                            speed: INITIAL_SNAKE_SPEED,
-                            direction: INITIAL_SNAKE_DIRECTION,
-                        },
+                        Tail,
+                        Collider,
+                        Movement(INITIAL_SNAKE_DIRECTION),
                     ))
                     .id();
-
-                snake.body.push(new_tail);
+                body.push(new_tail);
+            } else if maybe_tail.is_some() {
+                if body.len() > 1 {
+                    // Collision with tail
+                    info!("TAIL COLLISION");
+                }
+            } else {
+                // Collision with walls
+                info!("WALL COLLISION");
             }
         }
     }
@@ -352,8 +416,16 @@ fn main() {
         }))
         .insert_resource(Scoreboard { value: 0 })
         .insert_resource(ClearColor(BACKGROUND_COLOR))
+        .insert_resource(GameTimer(Timer::from_seconds(
+            1.0 / REFRESH_RATE,
+            TimerMode::Repeating,
+        )))
+        .add_event::<CollisionEvent>()
         .add_systems(Startup, setup)
-        .add_systems(FixedUpdate, (move_snake, check_for_collisions).chain())
+        .add_systems(
+            FixedUpdate,
+            (handle_input, move_snake, check_for_collisions).chain(),
+        )
         .add_systems(Update, (update_scoreboard, bevy::window::close_on_esc))
         .run();
 }
@@ -364,11 +436,13 @@ fn gen_apple_location() -> Vec2 {
     let padding = 15.0;
     let x_min = LEFT_WALL + WALL_THICKNESS / 2.0 + padding;
     let x_max = RIGHT_WALL - WALL_THICKNESS / 2.0 - padding;
-    let y_min = BOTTOM_WALL + WALL_THICKNESS / 2.0 + padding + OFFSET;
-    let y_max = TOP_WALL - WALL_THICKNESS / 2.0 - padding - OFFSET;
+    let y_min = BOTTOM_WALL + WALL_THICKNESS / 2.0 + padding;
+    let y_max = TOP_WALL - WALL_THICKNESS / 2.0 - padding;
 
-    let x = rng.gen_range(x_min..=x_max);
-    let y = rng.gen_range(y_min..=y_max);
+    let mut x = rng.gen_range(x_min..=x_max);
+    let mut y = rng.gen_range(y_min..=y_max);
+    x = (x / TILE_SIZE.x).round() * TILE_SIZE.x;
+    y = (y / TILE_SIZE.y).round() * TILE_SIZE.y;
 
     Vec2::new(x, y)
 }
