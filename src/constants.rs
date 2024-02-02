@@ -6,12 +6,18 @@ pub const WALL_COLOR: Color = Color::rgb(0.5, 0.5, 0.5);
 
 pub const BACKGROUND_COLOR: Color = Color::rgb(0.05, 0.05, 0.05);
 pub const TILE_SIZE: Vec2 = Vec2::new(20.0, 20.0);
-pub const REFRESH_RATE: f32 = 6.0;
-pub const GRID_WIDTH: usize = 17;
-pub const GRID_HEIGHT: usize = 17;
+pub const REFRESH_RATE: f32 = 7.0;
+pub const GRID_WIDTH: usize = 21;
+pub const GRID_HEIGHT: usize = 21;
 
 pub const SCOREBOARD_FONT_SIZE: f32 = 20.0;
 pub const TEXT_COLOR: Color = Color::rgb(0.0, 0.7, 0.0);
+pub const MENU_TEXT_COLOR: Color = Color::rgb(0.8, 0.8, 0.8);
+pub const TEXT_BUTTON_SIZE: f32 = 40.0;
+pub const BUTTON_WIDTH: f32 = 250.0;
+pub const BUTTON_HEIGHT: f32 = 65.0;
+pub const BUTTON_MARGIN: f32 = 20.0;
+pub const MENU_TITLE_SIZE: f32 = 40.0;
 
 pub const SNAKE_SIZE: Vec2 = Vec2::new(17.5, 17.5);
 pub const INITIAL_SNAKE_DIRECTION: SnakeDirection = SnakeDirection::Up;

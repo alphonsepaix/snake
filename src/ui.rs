@@ -1,3 +1,5 @@
+#![allow(clippy::type_complexity)]
+
 use bevy::prelude::*;
 
 #[derive(Clone, Copy, Default, Eq, PartialEq, Debug, Hash, States)]
@@ -73,6 +75,7 @@ pub mod splash {
 }
 
 pub mod game {
+    use super::despawn_screen;
     use super::GameState;
     use crate::constants::*;
     use crate::game_logic::*;
@@ -95,6 +98,10 @@ pub mod game {
                     )
                         .chain()
                         .run_if(in_state(GameState::Game)),
+                )
+                .add_systems(
+                    OnExit(GameState::Game),
+                    (despawn_screen::<OnGameScreen>, reset_state),
                 );
         }
     }
@@ -103,17 +110,11 @@ pub mod game {
     pub struct OnGameScreen;
 
     pub fn game_setup(mut commands: Commands) {
-        // The walls
-        commands.spawn((WallBundle::new(WallLocation::Top), OnGameScreen));
-        commands.spawn((WallBundle::new(WallLocation::Bottom), OnGameScreen));
-        commands.spawn((WallBundle::new(WallLocation::Left), OnGameScreen));
-        commands.spawn((WallBundle::new(WallLocation::Right), OnGameScreen));
-
         // The snake
         commands.spawn((
             SpriteBundle {
                 transform: Transform {
-                    translation: Vec3::new(0.0, 0.0, 0.0),
+                    translation: Vec3::new(0.0, 0.0, 1.0),
                     scale: SNAKE_SIZE.extend(0.0),
                     ..default()
                 },
@@ -129,6 +130,12 @@ pub mod game {
             Movement(INITIAL_SNAKE_DIRECTION),
         ));
 
+        // The walls
+        commands.spawn((WallBundle::new(WallLocation::Top), OnGameScreen));
+        commands.spawn((WallBundle::new(WallLocation::Bottom), OnGameScreen));
+        commands.spawn((WallBundle::new(WallLocation::Left), OnGameScreen));
+        commands.spawn((WallBundle::new(WallLocation::Right), OnGameScreen));
+
         // A first apple
         let location = loop {
             let loc = gen_apple_location();
@@ -137,15 +144,6 @@ pub mod game {
             }
         };
         spawn_apple(&mut commands, location);
-
-        commands.insert_resource(Scoreboard { value: 0 });
-        commands.insert_resource(PlayerInput(None));
-        commands.insert_resource(SnakeBody { body: vec![] });
-        commands.insert_resource(ClearColor(BACKGROUND_COLOR));
-        commands.insert_resource(GameTimer(Timer::from_seconds(
-            1.0 / REFRESH_RATE,
-            TimerMode::Repeating,
-        )));
 
         // The scoreboard
         let padding = (WINDOW_PADDING - SCOREBOARD_FONT_SIZE) / 2.0;
@@ -173,6 +171,18 @@ pub mod game {
             }),
             OnGameScreen,
         ));
+    }
+
+    fn reset_state(
+        mut scoreboard: ResMut<Scoreboard>,
+        mut player_input: ResMut<PlayerInput>,
+        mut snake_body: ResMut<SnakeBody>,
+        mut timer: ResMut<GameTimer>,
+    ) {
+        scoreboard.value = 0;
+        snake_body.clear();
+        player_input.0 = None;
+        timer.reset();
     }
 }
 
@@ -209,16 +219,16 @@ pub mod menu {
 
     pub fn menu_setup(mut commands: Commands) {
         let button_style = Style {
-            width: Val::Px(250.0),
-            height: Val::Px(65.0),
-            margin: UiRect::all(Val::Px(20.0)),
+            width: Val::Px(BUTTON_WIDTH),
+            height: Val::Px(BUTTON_HEIGHT),
+            margin: UiRect::all(Val::Px(BUTTON_MARGIN)),
             justify_content: JustifyContent::Center,
             align_items: AlignItems::Center,
             ..default()
         };
         let button_text_style = TextStyle {
-            font_size: 40.0,
-            color: TEXT_COLOR,
+            font_size: TEXT_BUTTON_SIZE,
+            color: MENU_TEXT_COLOR,
             ..default()
         };
 
@@ -244,17 +254,17 @@ pub mod menu {
                             align_items: AlignItems::Center,
                             ..default()
                         },
-                        background_color: Color::CRIMSON.into(),
+                        background_color: Color::DARK_GREEN.into(),
                         ..default()
                     })
                     .with_children(|parent| {
                         // Game name
                         parent.spawn(
                             TextBundle::from_section(
-                                "Snake Game",
+                                "Snake",
                                 TextStyle {
-                                    font_size: 80.0,
-                                    color: TEXT_COLOR,
+                                    font_size: MENU_TITLE_SIZE,
+                                    color: MENU_TEXT_COLOR,
                                     ..default()
                                 },
                             )

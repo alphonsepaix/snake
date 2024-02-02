@@ -1,4 +1,5 @@
 #![allow(clippy::type_complexity)]
+#![allow(clippy::too_many_arguments)]
 
 use crate::ui::game::OnGameScreen;
 use crate::{constants::*, ui::GameState};
@@ -116,6 +117,8 @@ pub fn check_for_collisions(
             if maybe_apple.is_some() {
                 // Handle collision with an apple
                 commands.entity(collider_entity).despawn();
+
+                // Spawn a new apple
                 let apple_loc = loop {
                     let location = gen_apple_location();
                     if collider_query
@@ -126,6 +129,7 @@ pub fn check_for_collisions(
                     }
                 };
                 spawn_apple(&mut commands, apple_loc);
+
                 scoreboard.value += 1;
 
                 let transform = if body.is_empty() {
@@ -134,6 +138,7 @@ pub fn check_for_collisions(
                     let tail_id = body.last().unwrap();
                     *tail.component::<Transform>(*tail_id)
                 };
+
                 let new_tail = commands
                     .spawn((
                         SpriteBundle {
@@ -150,9 +155,12 @@ pub fn check_for_collisions(
                         OnGameScreen,
                     ))
                     .id();
+
                 body.push(new_tail);
+
                 if body.len() == GRID_HEIGHT * GRID_WIDTH - 1 {
                     events.send(GameEvent::GameWon);
+                    game_state.set(GameState::Menu);
                 }
             } else if maybe_tail.is_some() {
                 if body.len() > 1 {
@@ -162,8 +170,8 @@ pub fn check_for_collisions(
                 }
             } else {
                 // Collision with walls
-                events.send(GameEvent::GameOver("You hit a wall!".into()));
                 game_state.set(GameState::Menu);
+                events.send(GameEvent::GameOver("You hit a wall!".into()));
             }
         }
     }

@@ -28,6 +28,14 @@ fn main() {
         .add_plugins((splash::SplashPlugin, menu::MenuPlugin, game::GamePlugin))
         .add_state::<GameState>()
         .add_event::<GameEvent>()
+        .insert_resource(Scoreboard { value: 0 })
+        .insert_resource(PlayerInput(None))
+        .insert_resource(SnakeBody { body: vec![] })
+        .insert_resource(ClearColor(BACKGROUND_COLOR))
+        .insert_resource(GameTimer(Timer::from_seconds(
+            1.0 / REFRESH_RATE,
+            TimerMode::Repeating,
+        )))
         .add_systems(Startup, setup)
         .add_systems(Update, bevy::window::close_on_esc)
         .run();
