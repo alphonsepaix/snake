@@ -254,16 +254,16 @@ fn handle_input(keyboard_input: Res<Input<KeyCode>>, mut player_input: ResMut<Pl
     let mut direction: Option<SnakeDirection> = None;
     use SnakeDirection::*;
 
-    if keyboard_input.pressed(KeyCode::Up) {
+    if keyboard_input.pressed(KeyCode::Up) || keyboard_input.pressed(KeyCode::P) {
         direction = Some(Up);
     }
-    if keyboard_input.pressed(KeyCode::Down) {
+    if keyboard_input.pressed(KeyCode::Down) || keyboard_input.pressed(KeyCode::I) {
         direction = Some(Down);
     }
-    if keyboard_input.pressed(KeyCode::Left) {
+    if keyboard_input.pressed(KeyCode::Left) || keyboard_input.pressed(KeyCode::U) {
         direction = Some(Left);
     }
-    if keyboard_input.pressed(KeyCode::Right) {
+    if keyboard_input.pressed(KeyCode::Right) || keyboard_input.pressed(KeyCode::E) {
         direction = Some(Right);
     }
 
