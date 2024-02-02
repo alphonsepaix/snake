@@ -87,30 +87,41 @@ pub mod game {
 
     impl Plugin for GamePlugin {
         fn build(&self, app: &mut App) {
-            app.add_systems(OnEnter(GameState::Game), game_setup)
-                .add_systems(
-                    FixedUpdate,
-                    (
-                        handle_input,
-                        move_snake,
-                        check_for_collisions,
-                        update_scoreboard,
-                        handle_events,
-                    )
-                        .chain()
-                        .run_if(in_state(GameState::Game)),
+            app.add_systems(
+                OnEnter(GameState::Game),
+                (set_game_resolution, game_setup).chain(),
+            )
+            .add_systems(
+                FixedUpdate,
+                (
+                    handle_input,
+                    move_snake,
+                    check_for_collisions,
+                    update_scoreboard,
                 )
-                .add_systems(
-                    OnExit(GameState::Game),
-                    (despawn_screen::<OnGameScreen>, reset_state),
-                );
+                    .chain()
+                    .run_if(in_state(GameState::Game)),
+            )
+            .add_systems(
+                OnExit(GameState::Game),
+                (
+                    despawn_screen::<OnGameScreen>,
+                    reset_state,
+                    set_menu_resolution,
+                )
+                    .chain(),
+            );
         }
     }
 
     #[derive(Component)]
     pub struct OnGameScreen;
 
-    pub fn game_setup(mut commands: Commands) {
+    pub fn game_setup(mut commands: Commands, mut already_played: ResMut<AlreadyPlayed>) {
+        if !already_played.0 {
+            already_played.0 = true;
+        }
+
         // The snake
         commands.spawn((
             SpriteBundle {
@@ -190,7 +201,7 @@ pub mod game {
 pub mod menu {
     use super::results::ResultsTimer;
     use super::{despawn_screen, GameState};
-    use crate::constants::*;
+    use crate::{constants::*, AlreadyPlayed};
     use bevy::app::AppExit;
     use bevy::prelude::*;
 
@@ -219,7 +230,11 @@ pub mod menu {
         Quit,
     }
 
-    pub fn menu_setup(mut commands: Commands, mut timer: ResMut<ResultsTimer>) {
+    pub fn menu_setup(
+        mut commands: Commands,
+        mut timer: ResMut<ResultsTimer>,
+        already_played: Res<AlreadyPlayed>,
+    ) {
         let button_style = Style {
             width: Val::Px(BUTTON_WIDTH),
             height: Val::Px(BUTTON_HEIGHT),
@@ -276,6 +291,7 @@ pub mod menu {
                             }),
                         );
 
+                        let play_button_text = if already_played.0 { "Replay" } else { "Play" };
                         // Play button
                         parent
                             .spawn((
@@ -288,7 +304,7 @@ pub mod menu {
                             ))
                             .with_children(|parent| {
                                 parent.spawn(TextBundle::from_section(
-                                    "Play",
+                                    play_button_text,
                                     button_text_style.clone(),
                                 ));
                             });
@@ -349,7 +365,7 @@ pub mod menu {
 
 pub mod results {
     use super::{despawn_screen, GameState};
-    use crate::constants::{RESULTS_TEXT_COLOR, RESULTS_TEXT_SIZE};
+    use crate::{constants::RESULTS_TEXT_SIZE, game_logic::GameEvent};
     use bevy::prelude::*;
 
     pub struct ResultsPlugin;
@@ -371,7 +387,16 @@ pub mod results {
     #[derive(Resource, Deref, DerefMut)]
     pub struct ResultsTimer(pub Timer);
 
-    fn results_setup(mut commands: Commands) {
+    fn results_setup(mut commands: Commands, mut events: EventReader<GameEvent>) {
+        // should not be empty
+        assert!(!events.is_empty());
+
+        let event = events.read().last().unwrap();
+        let (results, text, color) = match event {
+            GameEvent::GameOver(why) => ("Game over!", why.clone(), Color::RED),
+            GameEvent::GameWon => ("Good job!", "Congratulations!".to_string(), Color::GREEN),
+        };
+
         commands
             .spawn((
                 NodeBundle {
@@ -394,17 +419,32 @@ pub mod results {
                             align_items: AlignItems::Center,
                             ..default()
                         },
-                        background_color: Color::DARK_GREEN.into(),
+                        background_color: Color::BLACK.into(),
                         ..default()
                     })
                     .with_children(|parent| {
-                        // Game name
                         parent.spawn(
                             TextBundle::from_section(
-                                "Results",
+                                results,
                                 TextStyle {
                                     font_size: RESULTS_TEXT_SIZE,
-                                    color: RESULTS_TEXT_COLOR,
+                                    color,
+                                    ..default()
+                                },
+                            )
+                            .with_style(Style {
+                                margin: UiRect::all(Val::Px(50.0)),
+                                ..default()
+                            }),
+                        );
+                    })
+                    .with_children(|parent| {
+                        parent.spawn(
+                            TextBundle::from_section(
+                                text,
+                                TextStyle {
+                                    font_size: RESULTS_TEXT_SIZE,
+                                    color,
                                     ..default()
                                 },
                             )

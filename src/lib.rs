@@ -3,7 +3,11 @@ pub mod game_logic;
 pub mod ui;
 
 use bevy::prelude::*;
-use game_logic::{GameEvent, PlayerInput, Scoreboard, SnakeDirection};
+use constants::*;
+use game_logic::{PlayerInput, Scoreboard, SnakeDirection};
+
+#[derive(Deref, DerefMut, Resource)]
+pub struct AlreadyPlayed(pub bool);
 
 pub fn setup(mut commands: Commands) {
     commands.spawn(Camera2dBundle::default());
@@ -36,13 +40,16 @@ pub fn handle_input(keyboard_input: Res<Input<KeyCode>>, mut player_input: ResMu
     }
 }
 
-pub fn handle_events(mut events: EventReader<GameEvent>) {
-    if !events.is_empty() {
-        for event in events.read() {
-            match event {
-                GameEvent::GameOver(why) => println!("Game over! {}", why),
-                GameEvent::GameWon => println!("You won!"),
-            }
-        }
-    }
+pub fn set_menu_resolution(mut windows: Query<&mut Window>) {
+    let mut window = windows.single_mut();
+    window.resolution.set(WINDOW_WIDTH, WINDOW_HEIHT);
+}
+
+pub fn set_game_resolution(mut windows: Query<&mut Window>) {
+    let mut window = windows.single_mut();
+    let (width, height) = (
+        (GRID_WIDTH as f32 + 2.0) * TILE_SIZE.x + WINDOW_PADDING * 2.0,
+        (GRID_HEIGHT as f32 + 2.0) * TILE_SIZE.y + WINDOW_PADDING * 2.0,
+    );
+    window.resolution.set(width, height);
 }

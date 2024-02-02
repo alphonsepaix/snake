@@ -34,6 +34,7 @@ fn main() {
         ))
         .add_state::<GameState>()
         .add_event::<GameEvent>()
+        .insert_resource(AlreadyPlayed(false))
         .insert_resource(Scoreboard { value: 0 })
         .insert_resource(PlayerInput(None))
         .insert_resource(SnakeBody { body: vec![] })
@@ -46,7 +47,7 @@ fn main() {
             RESULTS_SCREEN_DURATION,
             TimerMode::Repeating,
         )))
-        .add_systems(Startup, setup)
+        .add_systems(Startup, (set_menu_resolution, setup).chain())
         .add_systems(Update, bevy::window::close_on_esc)
         .run();
 }
