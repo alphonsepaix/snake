@@ -1,6 +1,7 @@
 use bevy::{prelude::*, window::WindowTheme};
 use snake::constants::*;
 use snake::game_logic::*;
+use snake::ui::results::ResultsTimer;
 use snake::ui::*;
 use snake::*;
 
@@ -25,7 +26,12 @@ fn main() {
                 ..default()
             }),
         )
-        .add_plugins((splash::SplashPlugin, menu::MenuPlugin, game::GamePlugin))
+        .add_plugins((
+            splash::SplashPlugin,
+            menu::MenuPlugin,
+            game::GamePlugin,
+            results::ResultsPlugin,
+        ))
         .add_state::<GameState>()
         .add_event::<GameEvent>()
         .insert_resource(Scoreboard { value: 0 })
@@ -34,6 +40,10 @@ fn main() {
         .insert_resource(ClearColor(BACKGROUND_COLOR))
         .insert_resource(GameTimer(Timer::from_seconds(
             1.0 / REFRESH_RATE,
+            TimerMode::Repeating,
+        )))
+        .insert_resource(ResultsTimer(Timer::from_seconds(
+            RESULTS_SCREEN_DURATION,
             TimerMode::Repeating,
         )))
         .add_systems(Startup, setup)

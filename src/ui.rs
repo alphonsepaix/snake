@@ -8,6 +8,7 @@ pub enum GameState {
     Splash,
     Menu,
     Game,
+    Results,
 }
 
 pub mod splash {
@@ -187,6 +188,7 @@ pub mod game {
 }
 
 pub mod menu {
+    use super::results::ResultsTimer;
     use super::{despawn_screen, GameState};
     use crate::constants::*;
     use bevy::app::AppExit;
@@ -217,7 +219,7 @@ pub mod menu {
         Quit,
     }
 
-    pub fn menu_setup(mut commands: Commands) {
+    pub fn menu_setup(mut commands: Commands, mut timer: ResMut<ResultsTimer>) {
         let button_style = Style {
             width: Val::Px(BUTTON_WIDTH),
             height: Val::Px(BUTTON_HEIGHT),
@@ -306,6 +308,8 @@ pub mod menu {
                             });
                     });
             });
+
+        timer.reset();
     }
 
     fn button_system(
@@ -339,6 +343,87 @@ pub mod menu {
                     MenuButtonAction::Quit => app_exit_events.send(AppExit),
                 }
             }
+        }
+    }
+}
+
+pub mod results {
+    use super::{despawn_screen, GameState};
+    use crate::constants::{RESULTS_TEXT_COLOR, RESULTS_TEXT_SIZE};
+    use bevy::prelude::*;
+
+    pub struct ResultsPlugin;
+
+    impl Plugin for ResultsPlugin {
+        fn build(&self, app: &mut App) {
+            app.add_systems(OnEnter(GameState::Results), results_setup)
+                .add_systems(Update, countdown.run_if(in_state(GameState::Results)))
+                .add_systems(
+                    OnExit(GameState::Results),
+                    despawn_screen::<OnResultsScreen>,
+                );
+        }
+    }
+
+    #[derive(Component)]
+    struct OnResultsScreen;
+
+    #[derive(Resource, Deref, DerefMut)]
+    pub struct ResultsTimer(pub Timer);
+
+    fn results_setup(mut commands: Commands) {
+        commands
+            .spawn((
+                NodeBundle {
+                    style: Style {
+                        width: Val::Percent(100.0),
+                        height: Val::Percent(100.0),
+                        justify_content: JustifyContent::Center,
+                        align_items: AlignItems::Center,
+                        ..default()
+                    },
+                    ..default()
+                },
+                OnResultsScreen,
+            ))
+            .with_children(|parent| {
+                parent
+                    .spawn(NodeBundle {
+                        style: Style {
+                            flex_direction: FlexDirection::Column,
+                            align_items: AlignItems::Center,
+                            ..default()
+                        },
+                        background_color: Color::DARK_GREEN.into(),
+                        ..default()
+                    })
+                    .with_children(|parent| {
+                        // Game name
+                        parent.spawn(
+                            TextBundle::from_section(
+                                "Results",
+                                TextStyle {
+                                    font_size: RESULTS_TEXT_SIZE,
+                                    color: RESULTS_TEXT_COLOR,
+                                    ..default()
+                                },
+                            )
+                            .with_style(Style {
+                                margin: UiRect::all(Val::Px(50.0)),
+                                ..default()
+                            }),
+                        );
+                    });
+            });
+    }
+
+    fn countdown(
+        mut game_state: ResMut<NextState<GameState>>,
+        time: Res<Time>,
+        mut timer: ResMut<ResultsTimer>,
+    ) {
+        if timer.tick(time.delta()).finished() {
+            game_state.set(GameState::Menu);
         }
     }
 }

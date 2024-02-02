@@ -160,17 +160,17 @@ pub fn check_for_collisions(
 
                 if body.len() == GRID_HEIGHT * GRID_WIDTH - 1 {
                     events.send(GameEvent::GameWon);
-                    game_state.set(GameState::Menu);
+                    game_state.set(GameState::Results);
                 }
             } else if maybe_tail.is_some() {
                 if body.len() > 1 {
                     // Collision with tail
                     events.send(GameEvent::GameOver("You hit your tail!".into()));
-                    game_state.set(GameState::Menu);
+                    game_state.set(GameState::Results);
                 }
             } else {
                 // Collision with walls
-                game_state.set(GameState::Menu);
+                game_state.set(GameState::Results);
                 events.send(GameEvent::GameOver("You hit a wall!".into()));
             }
         }
