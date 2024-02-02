@@ -25,7 +25,7 @@ fn main() {
                 ..default()
             }),
         )
-        .add_plugins((splash::SplashPlugin, game::GamePlugin))
+        .add_plugins((splash::SplashPlugin, menu::MenuPlugin, game::GamePlugin))
         .add_state::<GameState>()
         .add_event::<GameEvent>()
         .add_systems(Startup, setup)

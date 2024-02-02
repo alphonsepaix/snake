@@ -1,7 +1,7 @@
 #![allow(clippy::type_complexity)]
 
-use crate::constants::*;
 use crate::ui::game::OnGameScreen;
+use crate::{constants::*, ui::GameState};
 use bevy::{prelude::*, sprite::collide_aabb::collide};
 use rand::{thread_rng, Rng};
 use std::ops::{Deref, DerefMut};
@@ -94,6 +94,7 @@ pub fn check_for_collisions(
     mut commands: Commands,
     mut scoreboard: ResMut<Scoreboard>,
     mut body: ResMut<SnakeBody>,
+    mut game_state: ResMut<NextState<GameState>>,
     mut events: EventWriter<GameEvent>,
     snake_query: Query<&mut Transform, With<Head>>,
     collider_query: Query<
@@ -157,10 +158,12 @@ pub fn check_for_collisions(
                 if body.len() > 1 {
                     // Collision with tail
                     events.send(GameEvent::GameOver("You hit your tail!".into()));
+                    game_state.set(GameState::Menu);
                 }
             } else {
                 // Collision with walls
                 events.send(GameEvent::GameOver("You hit a wall!".into()));
+                game_state.set(GameState::Menu);
             }
         }
     }

@@ -4,7 +4,6 @@ pub mod ui;
 
 use bevy::prelude::*;
 use game_logic::{GameEvent, PlayerInput, Scoreboard, SnakeDirection};
-use std::process;
 
 pub fn setup(mut commands: Commands) {
     commands.spawn(Camera2dBundle::default());
@@ -45,6 +44,5 @@ pub fn handle_events(mut events: EventReader<GameEvent>) {
                 GameEvent::GameWon => println!("You won!"),
             }
         }
-        process::exit(0);
     }
 }
