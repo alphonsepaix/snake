@@ -6,9 +6,9 @@ pub const WALL_COLOR: Color = Color::rgb(0.5, 0.5, 0.5);
 
 pub const BACKGROUND_COLOR: Color = Color::rgb(0.05, 0.05, 0.05);
 pub const TILE_SIZE: Vec2 = Vec2::new(20.0, 20.0);
-pub const REFRESH_RATE: f32 = 7.0;
-pub const GRID_WIDTH: usize = 25;
-pub const GRID_HEIGHT: usize = 25;
+pub const REFRESH_RATE: f32 = 9.0;
+pub const GRID_WIDTH: usize = 17;
+pub const GRID_HEIGHT: usize = 17;
 
 pub const SCOREBOARD_FONT_SIZE: f32 = 20.0;
 pub const TEXT_COLOR: Color = Color::rgb(0.0, 0.7, 0.0);
