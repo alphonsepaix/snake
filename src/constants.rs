@@ -22,3 +22,5 @@ pub const APPLE_COLOR: Color = Color::rgb(1.0, 0.0, 0.0);
 pub const APPLE_SIZE: Vec2 = Vec2::new(12.0, 12.0);
 
 pub const WINDOW_PADDING: f32 = 50.0;
+
+pub const SPLASH_SCREEN_DURATION: f32 = 2.0;

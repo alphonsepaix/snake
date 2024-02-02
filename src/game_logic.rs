@@ -1,6 +1,7 @@
 #![allow(clippy::type_complexity)]
 
 use crate::constants::*;
+use crate::ui::game::OnGameScreen;
 use bevy::{prelude::*, sprite::collide_aabb::collide};
 use rand::{thread_rng, Rng};
 use std::ops::{Deref, DerefMut};
@@ -145,6 +146,7 @@ pub fn check_for_collisions(
                         Tail,
                         Collider,
                         Movement(INITIAL_SNAKE_DIRECTION),
+                        OnGameScreen,
                     ))
                     .id();
                 body.push(new_tail);
@@ -222,5 +224,66 @@ pub fn spawn_apple(commands: &mut Commands, loc: Vec2) {
         },
         Apple,
         Collider,
+        OnGameScreen,
     ));
+}
+
+pub enum WallLocation {
+    Top,
+    Bottom,
+    Left,
+    Right,
+}
+
+impl WallLocation {
+    pub fn size(&self) -> Vec2 {
+        use WallLocation::*;
+        match self {
+            Top | Bottom => Vec2::new(
+                GRID_WIDTH as f32 * TILE_SIZE.x + TILE_SIZE.x + WALL_THICKNESS,
+                WALL_THICKNESS,
+            ),
+            Left | Right => Vec2::new(
+                WALL_THICKNESS,
+                GRID_HEIGHT as f32 * TILE_SIZE.y + TILE_SIZE.y + WALL_THICKNESS,
+            ),
+        }
+    }
+
+    pub fn position(&self) -> Vec2 {
+        let x = ((GRID_WIDTH + 1) / 2) as f32 * TILE_SIZE.x;
+        let y = ((GRID_HEIGHT + 1) / 2) as f32 * TILE_SIZE.y;
+        match self {
+            WallLocation::Top => Vec2::new(0.0, y),
+            WallLocation::Bottom => Vec2::new(0.0, -y),
+            WallLocation::Left => Vec2::new(-x, 0.0),
+            WallLocation::Right => Vec2::new(x, 0.0),
+        }
+    }
+}
+
+#[derive(Bundle)]
+pub struct WallBundle {
+    sprite_bundle: SpriteBundle,
+    collider: Collider,
+}
+
+impl WallBundle {
+    pub fn new(location: WallLocation) -> Self {
+        WallBundle {
+            sprite_bundle: SpriteBundle {
+                transform: Transform {
+                    translation: location.position().extend(0.0),
+                    scale: location.size().extend(0.0),
+                    ..default()
+                },
+                sprite: Sprite {
+                    color: WALL_COLOR,
+                    ..default()
+                },
+                ..default()
+            },
+            collider: Collider,
+        }
+    }
 }

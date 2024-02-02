@@ -1,4 +1,7 @@
 use bevy::{prelude::*, window::WindowTheme};
+use snake::constants::*;
+use snake::game_logic::*;
+use snake::ui::*;
 use snake::*;
 
 fn main() {
@@ -22,24 +25,10 @@ fn main() {
                 ..default()
             }),
         )
-        .insert_resource(Scoreboard { value: 0 })
-        .insert_resource(ClearColor(BACKGROUND_COLOR))
-        .insert_resource(GameTimer(Timer::from_seconds(
-            1.0 / REFRESH_RATE,
-            TimerMode::Repeating,
-        )))
+        .add_plugins((splash::SplashPlugin, game::GamePlugin))
+        .add_state::<GameState>()
         .add_event::<GameEvent>()
         .add_systems(Startup, setup)
-        .add_systems(
-            FixedUpdate,
-            (
-                handle_input,
-                move_snake,
-                check_for_collisions,
-                handle_events,
-            )
-                .chain(),
-        )
-        .add_systems(Update, (update_scoreboard, bevy::window::close_on_esc))
+        .add_systems(Update, bevy::window::close_on_esc)
         .run();
 }
