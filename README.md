@@ -1,4 +1,4 @@
-# [![snake-rs](image.png)](https://github.com/alphonsepaix/snake-rs)
+# snake-rs
 
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
@@ -9,8 +9,6 @@ A simple snake game written in Rust with the Bevy engine.
 ### Code
 
 The code in this repository is licensed under the [MIT License](LICENSE).
-
-Please see the [LICENSE](LICENSE) file for details.
 
 ### Image
 
