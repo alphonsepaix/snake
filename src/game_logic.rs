@@ -3,6 +3,7 @@
 
 use crate::ui::game::OnGameScreen;
 use crate::{constants::*, ui::GameState};
+use crate::{AppleSound, WallSound};
 use bevy::{prelude::*, sprite::collide_aabb::collide};
 use rand::{thread_rng, Rng};
 use std::ops::{Deref, DerefMut};
@@ -103,6 +104,8 @@ pub fn check_for_collisions(
         (With<Collider>, Without<Head>),
     >,
     tail: Query<&Transform, (With<Tail>, Without<Head>)>,
+    apple_sound: Res<AppleSound>,
+    wall_sound: Res<WallSound>,
 ) {
     let snake_transform = snake_query.single();
 
@@ -117,6 +120,7 @@ pub fn check_for_collisions(
             if maybe_apple.is_some() {
                 // Handle collision with an apple
                 commands.entity(collider_entity).despawn();
+                play_collision_sound(&mut commands, apple_sound.0.clone());
 
                 // Spawn a new apple
                 let apple_loc = loop {
@@ -165,11 +169,13 @@ pub fn check_for_collisions(
             } else if maybe_tail.is_some() {
                 if body.len() > 1 {
                     // Collision with tail
+                    play_collision_sound(&mut commands, wall_sound.0.clone());
                     events.send(GameEvent::GameOver("You hit your tail!".into()));
                     game_state.set(GameState::Results);
                 }
             } else {
-                // Collision with walls
+                // Collision with a wall
+                play_collision_sound(&mut commands, wall_sound.0.clone());
                 game_state.set(GameState::Results);
                 events.send(GameEvent::GameOver("You hit a wall!".into()));
             }
@@ -297,4 +303,11 @@ impl WallBundle {
             collider: Collider,
         }
     }
+}
+
+fn play_collision_sound(commands: &mut Commands, source: Handle<AudioSource>) {
+    commands.spawn(AudioBundle {
+        source,
+        settings: PlaybackSettings::DESPAWN,
+    });
 }

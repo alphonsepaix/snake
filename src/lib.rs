@@ -2,15 +2,36 @@ pub mod constants;
 pub mod game_logic;
 pub mod ui;
 
-use bevy::prelude::*;
+use bevy::{prelude::*, winit::WinitWindows};
 use constants::*;
 use game_logic::{PlayerInput, Scoreboard, SnakeDirection};
+use winit::window::Icon;
 
 #[derive(Deref, DerefMut, Resource)]
 pub struct AlreadyPlayed(pub bool);
 
-pub fn setup(mut commands: Commands) {
+#[derive(Resource)]
+pub struct AppleSound(Handle<AudioSource>);
+
+#[derive(Resource)]
+pub struct WallSound(Handle<AudioSource>);
+
+#[derive(Resource)]
+pub struct ButtonHoveredSound(Handle<AudioSource>);
+
+#[derive(Resource)]
+pub struct ButtonPressedSound(Handle<AudioSource>);
+
+pub fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn(Camera2dBundle::default());
+    commands.spawn(AudioBundle {
+        source: asset_server.load("music.ogg"),
+        settings: PlaybackSettings::LOOP,
+    });
+    commands.insert_resource(AppleSound(asset_server.load("apple.ogg")));
+    commands.insert_resource(WallSound(asset_server.load("wall.ogg")));
+    commands.insert_resource(ButtonHoveredSound(asset_server.load("hovered.ogg")));
+    commands.insert_resource(ButtonPressedSound(asset_server.load("pressed.ogg")));
 }
 
 pub fn update_scoreboard(scoreboard: Res<Scoreboard>, mut query: Query<&mut Text>) {
@@ -52,4 +73,17 @@ pub fn set_game_resolution(mut windows: Query<&mut Window>) {
         (GRID_HEIGHT as f32 + 2.0) * TILE_SIZE.y + WINDOW_PADDING * 2.0,
     );
     window.resolution.set(width, height);
+}
+
+pub fn set_window_icon(windows: NonSend<WinitWindows>) {
+    let (rgba, width, height) = {
+        let image = image::open("assets/icon_snake.png").unwrap().into_rgba8();
+        let (width, height) = image.dimensions();
+        let rgba = image.into_raw();
+        (rgba, width, height)
+    };
+    let icon = Icon::from_rgba(rgba, width, height).unwrap();
+    for window in windows.windows.values() {
+        window.set_window_icon(Some(icon.clone()));
+    }
 }

@@ -13,7 +13,7 @@ pub enum GameState {
 
 pub mod splash {
     use super::{despawn_screen, GameState};
-    use crate::constants::SPLASH_SCREEN_DURATION;
+    use crate::{constants::SPLASH_SCREEN_DURATION, WINDOW_WIDTH};
     use bevy::prelude::*;
 
     pub struct SplashPlugin;
@@ -33,7 +33,7 @@ pub mod splash {
     struct SplashTimer(Timer);
 
     fn splash_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
-        let icon = asset_server.load("icon.png");
+        let icon = asset_server.load("icon_snake.png");
         commands
             .spawn((
                 NodeBundle {
@@ -51,7 +51,7 @@ pub mod splash {
             .with_children(|parent| {
                 parent.spawn(ImageBundle {
                     style: Style {
-                        width: Val::Px(200.0),
+                        width: Val::Px(WINDOW_WIDTH),
                         ..default()
                     },
                     image: UiImage::new(icon),
@@ -117,7 +117,11 @@ pub mod game {
     #[derive(Component)]
     pub struct OnGameScreen;
 
-    pub fn game_setup(mut commands: Commands, mut already_played: ResMut<AlreadyPlayed>) {
+    pub fn game_setup(
+        mut commands: Commands,
+        mut already_played: ResMut<AlreadyPlayed>,
+        asset_server: Res<AssetServer>,
+    ) {
         if !already_played.0 {
             already_played.0 = true;
         }
@@ -162,11 +166,11 @@ pub mod game {
         commands.spawn((
             TextBundle::from_sections([
                 TextSection::new(
-                    "Apples eaten: ",
+                    "Score = ".to_uppercase(),
                     TextStyle {
                         font_size: SCOREBOARD_FONT_SIZE,
                         color: TEXT_COLOR,
-                        ..default()
+                        font: asset_server.load("font.ttf"),
                     },
                 ),
                 TextSection::from_style(TextStyle {
@@ -201,7 +205,7 @@ pub mod game {
 pub mod menu {
     use super::results::ResultsTimer;
     use super::{despawn_screen, GameState};
-    use crate::{constants::*, AlreadyPlayed};
+    use crate::{constants::*, AlreadyPlayed, ButtonHoveredSound, ButtonPressedSound};
     use bevy::app::AppExit;
     use bevy::prelude::*;
 
@@ -233,6 +237,7 @@ pub mod menu {
     pub fn menu_setup(
         mut commands: Commands,
         mut timer: ResMut<ResultsTimer>,
+        asset_server: Res<AssetServer>,
         already_played: Res<AlreadyPlayed>,
     ) {
         let button_style = Style {
@@ -246,7 +251,7 @@ pub mod menu {
         let button_text_style = TextStyle {
             font_size: TEXT_BUTTON_SIZE,
             color: MENU_TEXT_COLOR,
-            ..default()
+            font: asset_server.load("font.ttf"),
         };
 
         commands
@@ -278,11 +283,11 @@ pub mod menu {
                         // Game name
                         parent.spawn(
                             TextBundle::from_section(
-                                "Snake",
+                                "Snake".to_uppercase(),
                                 TextStyle {
                                     font_size: MENU_TITLE_SIZE,
                                     color: MENU_TEXT_COLOR,
-                                    ..default()
+                                    font: asset_server.load("font.ttf"),
                                 },
                             )
                             .with_style(Style {
@@ -304,7 +309,7 @@ pub mod menu {
                             ))
                             .with_children(|parent| {
                                 parent.spawn(TextBundle::from_section(
-                                    play_button_text,
+                                    play_button_text.to_uppercase(),
                                     button_text_style.clone(),
                                 ));
                             });
@@ -320,7 +325,10 @@ pub mod menu {
                                 MenuButtonAction::Quit,
                             ))
                             .with_children(|parent| {
-                                parent.spawn(TextBundle::from_section("Quit", button_text_style));
+                                parent.spawn(TextBundle::from_section(
+                                    "Quit".to_uppercase(),
+                                    button_text_style,
+                                ));
                             });
                     });
             });
@@ -329,12 +337,27 @@ pub mod menu {
     }
 
     fn button_system(
+        mut commands: Commands,
         mut interaction_query: Query<
             (&Interaction, &mut BackgroundColor, Option<&SelectedOption>),
             (Changed<Interaction>, With<Button>),
         >,
+        hovered_sound: Res<ButtonHoveredSound>,
+        pressed_sound: Res<ButtonPressedSound>,
     ) {
         for (interaction, mut color, selected) in &mut interaction_query {
+            if *interaction == Interaction::Hovered {
+                commands.spawn(AudioBundle {
+                    source: hovered_sound.0.clone(),
+                    settings: PlaybackSettings::DESPAWN,
+                });
+            }
+            if *interaction == Interaction::Pressed {
+                commands.spawn(AudioBundle {
+                    source: pressed_sound.0.clone(),
+                    settings: PlaybackSettings::DESPAWN,
+                });
+            }
             *color = match (*interaction, selected) {
                 (Interaction::Pressed, _) | (Interaction::None, Some(_)) => PRESSED_BUTTON.into(),
                 (Interaction::Hovered, Some(_)) => HOVERED_PRESSED_BUTTON.into(),
@@ -387,7 +410,11 @@ pub mod results {
     #[derive(Resource, Deref, DerefMut)]
     pub struct ResultsTimer(pub Timer);
 
-    fn results_setup(mut commands: Commands, mut events: EventReader<GameEvent>) {
+    fn results_setup(
+        mut commands: Commands,
+        mut events: EventReader<GameEvent>,
+        asset_server: Res<AssetServer>,
+    ) {
         // should not be empty
         assert!(!events.is_empty());
 
@@ -425,11 +452,11 @@ pub mod results {
                     .with_children(|parent| {
                         parent.spawn(
                             TextBundle::from_section(
-                                results,
+                                results.to_uppercase(),
                                 TextStyle {
                                     font_size: RESULTS_TEXT_SIZE,
                                     color,
-                                    ..default()
+                                    font: asset_server.load("font.ttf"),
                                 },
                             )
                             .with_style(Style {
@@ -441,11 +468,11 @@ pub mod results {
                     .with_children(|parent| {
                         parent.spawn(
                             TextBundle::from_section(
-                                text,
+                                text.to_uppercase(),
                                 TextStyle {
                                     font_size: RESULTS_TEXT_SIZE,
                                     color,
-                                    ..default()
+                                    font: asset_server.load("font.ttf"),
                                 },
                             )
                             .with_style(Style {

@@ -47,7 +47,10 @@ fn main() {
             RESULTS_SCREEN_DURATION,
             TimerMode::Repeating,
         )))
-        .add_systems(Startup, (set_menu_resolution, setup).chain())
+        .add_systems(
+            Startup,
+            (set_menu_resolution, set_window_icon, setup).chain(),
+        )
         .add_systems(Update, bevy::window::close_on_esc)
         .run();
 }
