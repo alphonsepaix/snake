@@ -7,25 +7,20 @@ use snake::*;
 
 fn main() {
     App::new()
-        .add_plugins(
-            DefaultPlugins.set(WindowPlugin {
-                primary_window: Some(Window {
-                    title: "Snake".to_string(),
-                    resolution: (
-                        (GRID_WIDTH as f32 + 2.0) * TILE_SIZE.x + WINDOW_PADDING * 2.0,
-                        (GRID_HEIGHT as f32 + 2.0) * TILE_SIZE.y + WINDOW_PADDING * 2.0,
-                    )
-                        .into(),
-                    window_theme: Some(WindowTheme::Dark),
-                    enabled_buttons: bevy::window::EnabledButtons {
-                        maximize: false,
-                        ..default()
-                    },
+        .add_plugins(DefaultPlugins.set(WindowPlugin {
+            primary_window: Some(Window {
+                title: "Snake".to_string(),
+                resizable: false,
+                resolution: get_window_resolution().into(),
+                window_theme: Some(WindowTheme::Dark),
+                enabled_buttons: bevy::window::EnabledButtons {
+                    maximize: false,
                     ..default()
-                }),
+                },
                 ..default()
             }),
-        )
+            ..default()
+        }))
         .add_plugins((
             splash::SplashPlugin,
             menu::MenuPlugin,
@@ -47,10 +42,7 @@ fn main() {
             RESULTS_SCREEN_DURATION,
             TimerMode::Repeating,
         )))
-        .add_systems(
-            Startup,
-            (set_menu_resolution, set_window_icon, setup).chain(),
-        )
+        .add_systems(Startup, (set_window_icon, setup).chain())
         .add_systems(Update, bevy::window::close_on_esc)
         .run();
 }

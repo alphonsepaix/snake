@@ -61,23 +61,9 @@ pub fn handle_input(keyboard_input: Res<Input<KeyCode>>, mut player_input: ResMu
     }
 }
 
-pub fn set_menu_resolution(mut windows: Query<&mut Window>) {
-    let mut window = windows.single_mut();
-    window.resolution.set(WINDOW_WIDTH, WINDOW_HEIHT);
-}
-
-pub fn set_game_resolution(mut windows: Query<&mut Window>) {
-    let mut window = windows.single_mut();
-    let (width, height) = (
-        (GRID_WIDTH as f32 + 2.0) * TILE_SIZE.x + WINDOW_PADDING * 2.0,
-        (GRID_HEIGHT as f32 + 2.0) * TILE_SIZE.y + WINDOW_PADDING * 2.0,
-    );
-    window.resolution.set(width, height);
-}
-
 pub fn set_window_icon(windows: NonSend<WinitWindows>) {
     let (rgba, width, height) = {
-        let image = image::open("assets/icon_snake.png").unwrap().into_rgba8();
+        let image = image::open("assets/icon.png").unwrap().into_rgba8();
         let (width, height) = image.dimensions();
         let rgba = image.into_raw();
         (rgba, width, height)
@@ -86,4 +72,12 @@ pub fn set_window_icon(windows: NonSend<WinitWindows>) {
     for window in windows.windows.values() {
         window.set_window_icon(Some(icon.clone()));
     }
+}
+
+pub fn get_window_resolution() -> (f32, f32) {
+    let (width, height) = (
+        (GRID_WIDTH as f32 + 2.0) * TILE_SIZE.x + WINDOW_PADDING * 2.0,
+        (GRID_HEIGHT as f32 + 2.0) * TILE_SIZE.y + WINDOW_PADDING * 2.0,
+    );
+    (width.max(MENU_WIDTH), height.max(MENU_HEIGHT))
 }

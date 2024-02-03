@@ -2,6 +2,8 @@
 
 use bevy::prelude::*;
 
+use crate::{game_logic::WallLocation, get_window_resolution, WALL_THICKNESS};
+
 #[derive(Clone, Copy, Default, Eq, PartialEq, Debug, Hash, States)]
 pub enum GameState {
     #[default]
@@ -13,7 +15,7 @@ pub enum GameState {
 
 pub mod splash {
     use super::{despawn_screen, GameState};
-    use crate::{constants::SPLASH_SCREEN_DURATION, WINDOW_WIDTH};
+    use crate::{constants::SPLASH_SCREEN_DURATION, MENU_WIDTH};
     use bevy::prelude::*;
 
     pub struct SplashPlugin;
@@ -33,7 +35,7 @@ pub mod splash {
     struct SplashTimer(Timer);
 
     fn splash_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
-        let icon = asset_server.load("icon_snake.png");
+        let icon = asset_server.load("icon.png");
         commands
             .spawn((
                 NodeBundle {
@@ -51,7 +53,7 @@ pub mod splash {
             .with_children(|parent| {
                 parent.spawn(ImageBundle {
                     style: Style {
-                        width: Val::Px(WINDOW_WIDTH),
+                        width: Val::Px(MENU_WIDTH),
                         ..default()
                     },
                     image: UiImage::new(icon),
@@ -77,6 +79,7 @@ pub mod splash {
 
 pub mod game {
     use super::despawn_screen;
+    use super::get_scoreboard_position;
     use super::GameState;
     use crate::constants::*;
     use crate::game_logic::*;
@@ -87,30 +90,22 @@ pub mod game {
 
     impl Plugin for GamePlugin {
         fn build(&self, app: &mut App) {
-            app.add_systems(
-                OnEnter(GameState::Game),
-                (set_game_resolution, game_setup).chain(),
-            )
-            .add_systems(
-                FixedUpdate,
-                (
-                    handle_input,
-                    move_snake,
-                    check_for_collisions,
-                    update_scoreboard,
+            app.add_systems(OnEnter(GameState::Game), game_setup)
+                .add_systems(
+                    FixedUpdate,
+                    (
+                        handle_input,
+                        move_snake,
+                        check_for_collisions,
+                        update_scoreboard,
+                    )
+                        .chain()
+                        .run_if(in_state(GameState::Game)),
                 )
-                    .chain()
-                    .run_if(in_state(GameState::Game)),
-            )
-            .add_systems(
-                OnExit(GameState::Game),
-                (
-                    despawn_screen::<OnGameScreen>,
-                    reset_state,
-                    set_menu_resolution,
-                )
-                    .chain(),
-            );
+                .add_systems(
+                    OnExit(GameState::Game),
+                    (despawn_screen::<OnGameScreen>, reset_state),
+                );
         }
     }
 
@@ -161,32 +156,49 @@ pub mod game {
         };
         spawn_apple(&mut commands, location);
 
-        // The scoreboard
-        let padding = (WINDOW_PADDING - SCOREBOARD_FONT_SIZE) / 2.0;
-        commands.spawn((
-            TextBundle::from_sections([
-                TextSection::new(
-                    "Score = ".to_uppercase(),
-                    TextStyle {
-                        font_size: SCOREBOARD_FONT_SIZE,
-                        color: TEXT_COLOR,
-                        font: asset_server.load("font.ttf"),
+        commands
+            .spawn((
+                NodeBundle {
+                    style: Style {
+                        width: Val::Percent(100.0),
+                        height: Val::Px(get_scoreboard_position()),
+                        justify_content: JustifyContent::Center,
+                        align_items: AlignItems::End,
+                        ..default()
                     },
-                ),
-                TextSection::from_style(TextStyle {
-                    font_size: SCOREBOARD_FONT_SIZE,
-                    color: TEXT_COLOR,
                     ..default()
-                }),
-            ])
-            .with_style(Style {
-                position_type: PositionType::Absolute,
-                top: Val::Px(padding),
-                left: Val::Px(padding),
-                ..default()
-            }),
-            OnGameScreen,
-        ));
+                },
+                OnGameScreen,
+            ))
+            .with_children(|parent| {
+                parent
+                    .spawn(NodeBundle {
+                        style: Style {
+                            flex_direction: FlexDirection::Column,
+                            align_items: AlignItems::End,
+                            ..default()
+                        },
+                        background_color: Color::BLACK.into(),
+                        ..default()
+                    })
+                    .with_children(|parent| {
+                        parent.spawn(TextBundle::from_sections([
+                            TextSection::new(
+                                "Score = ".to_uppercase(),
+                                TextStyle {
+                                    font_size: SCOREBOARD_FONT_SIZE,
+                                    color: TEXT_COLOR,
+                                    font: asset_server.load("font.ttf"),
+                                },
+                            ),
+                            TextSection::from_style(TextStyle {
+                                font_size: SCOREBOARD_FONT_SIZE,
+                                color: TEXT_COLOR,
+                                ..default()
+                            }),
+                        ]));
+                    });
+            });
     }
 
     fn reset_state(
@@ -250,7 +262,7 @@ pub mod menu {
         };
         let button_text_style = TextStyle {
             font_size: TEXT_BUTTON_SIZE,
-            color: MENU_TEXT_COLOR,
+            color: Color::WHITE,
             font: asset_server.load("font.ttf"),
         };
 
@@ -276,7 +288,7 @@ pub mod menu {
                             align_items: AlignItems::Center,
                             ..default()
                         },
-                        background_color: Color::DARK_GREEN.into(),
+                        background_color: Color::BLACK.into(),
                         ..default()
                     })
                     .with_children(|parent| {
@@ -499,4 +511,10 @@ fn despawn_screen<T: Component>(to_despawn: Query<Entity, With<T>>, mut commands
     for entity in &to_despawn {
         commands.entity(entity).despawn_recursive();
     }
+}
+
+fn get_scoreboard_position() -> f32 {
+    let window_height = get_window_resolution().1;
+    let top_wall_height = WallLocation::position(&WallLocation::Top).y;
+    window_height / 2.0 - top_wall_height - WALL_THICKNESS
 }

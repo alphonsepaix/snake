@@ -10,9 +10,9 @@ pub const REFRESH_RATE: f32 = 7.0;
 pub const GRID_WIDTH: usize = 17;
 pub const GRID_HEIGHT: usize = 17;
 
-pub const SCOREBOARD_FONT_SIZE: f32 = 20.0;
+pub const SCOREBOARD_FONT_SIZE: f32 = 28.0;
 pub const TEXT_COLOR: Color = Color::rgb(0.0, 0.7, 0.0);
-pub const MENU_TEXT_COLOR: Color = Color::rgb(0.8, 0.8, 0.8);
+pub const MENU_TEXT_COLOR: Color = Color::GREEN;
 pub const RESULTS_TEXT_COLOR: Color = Color::rgb(0.8, 0.8, 0.8);
 pub const TEXT_BUTTON_SIZE: f32 = 40.0;
 pub const BUTTON_WIDTH: f32 = 250.0;
@@ -30,13 +30,13 @@ pub const APPLE_COLOR: Color = Color::rgb(1.0, 0.0, 0.0);
 pub const APPLE_SIZE: Vec2 = Vec2::new(12.0, 12.0);
 
 pub const WINDOW_PADDING: f32 = 50.0;
-pub const WINDOW_WIDTH: f32 = 500.0;
-pub const WINDOW_HEIHT: f32 = 500.0;
+pub const MENU_WIDTH: f32 = 500.0;
+pub const MENU_HEIGHT: f32 = 500.0;
 
 pub const SPLASH_SCREEN_DURATION: f32 = 2.0;
 pub const RESULTS_SCREEN_DURATION: f32 = 2.0;
 
-pub const NORMAL_BUTTON: Color = Color::rgb(0.15, 0.15, 0.15);
-pub const HOVERED_BUTTON: Color = Color::rgb(0.25, 0.25, 0.25);
-pub const HOVERED_PRESSED_BUTTON: Color = Color::rgb(0.25, 0.65, 0.25);
-pub const PRESSED_BUTTON: Color = Color::rgb(0.35, 0.75, 0.35);
+pub const NORMAL_BUTTON: Color = Color::rgb(0.25, 0.25, 0.25);
+pub const HOVERED_BUTTON: Color = Color::rgb(0.35, 0.35, 0.35);
+pub const HOVERED_PRESSED_BUTTON: Color = Color::rgb(0.35, 0.75, 0.35);
+pub const PRESSED_BUTTON: Color = Color::rgb(0.45, 0.85, 0.45);
