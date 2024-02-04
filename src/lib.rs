@@ -7,6 +7,8 @@ use constants::*;
 use game_logic::{PlayerInput, Scoreboard, SnakeDirection};
 use winit::window::Icon;
 
+use crate::ui::game::GameMode;
+
 #[derive(Deref, DerefMut, Resource)]
 pub struct AlreadyPlayed(pub bool);
 
@@ -22,12 +24,18 @@ pub struct ButtonHoveredSound(Handle<AudioSource>);
 #[derive(Resource)]
 pub struct ButtonPressedSound(Handle<AudioSource>);
 
+#[derive(Component)]
+pub struct MainMusic;
+
 pub fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn(Camera2dBundle::default());
-    commands.spawn(AudioBundle {
-        source: asset_server.load("music.ogg"),
-        settings: PlaybackSettings::LOOP,
-    });
+    commands.spawn((
+        AudioBundle {
+            source: asset_server.load("music.ogg"),
+            settings: PlaybackSettings::LOOP,
+        },
+        MainMusic,
+    ));
     commands.insert_resource(AppleSound(asset_server.load("apple.ogg")));
     commands.insert_resource(WallSound(asset_server.load("wall.ogg")));
     commands.insert_resource(ButtonHoveredSound(asset_server.load("hovered.ogg")));
@@ -39,25 +47,46 @@ pub fn update_scoreboard(scoreboard: Res<Scoreboard>, mut query: Query<&mut Text
     text.sections[1].value = scoreboard.value.to_string();
 }
 
-pub fn handle_input(keyboard_input: Res<Input<KeyCode>>, mut player_input: ResMut<PlayerInput>) {
-    let mut direction: Option<SnakeDirection> = None;
-    use SnakeDirection::*;
+pub fn handle_input(
+    keyboard_input: Res<Input<KeyCode>>,
+    mut player_input: ResMut<PlayerInput>,
+    current_state: Res<State<GameMode>>,
+    mut next_state: ResMut<NextState<GameMode>>,
+    music_controller: Query<&AudioSink, With<MainMusic>>,
+) {
+    // Toggle game state
+    if keyboard_input.just_pressed(KeyCode::Space) {
+        let sink = music_controller.get_single().unwrap();
+        let audio_scale_factor = 3.0;
+        if let GameMode::Running = current_state.get() {
+            next_state.set(GameMode::Pause);
+            sink.set_volume(sink.volume() / audio_scale_factor);
+        } else {
+            next_state.set(GameMode::Running);
+            sink.set_volume(sink.volume() * audio_scale_factor);
+        }
+    }
 
-    if keyboard_input.pressed(KeyCode::Up) || keyboard_input.pressed(KeyCode::P) {
-        direction = Some(Up);
-    }
-    if keyboard_input.pressed(KeyCode::Down) || keyboard_input.pressed(KeyCode::I) {
-        direction = Some(Down);
-    }
-    if keyboard_input.pressed(KeyCode::Left) || keyboard_input.pressed(KeyCode::U) {
-        direction = Some(Left);
-    }
-    if keyboard_input.pressed(KeyCode::Right) || keyboard_input.pressed(KeyCode::E) {
-        direction = Some(Right);
-    }
+    if let GameMode::Running = current_state.get() {
+        let mut direction: Option<SnakeDirection> = None;
+        use SnakeDirection::*;
 
-    if let Some(direction) = direction {
-        player_input.push(direction);
+        if keyboard_input.pressed(KeyCode::Up) || keyboard_input.pressed(KeyCode::P) {
+            direction = Some(Up);
+        }
+        if keyboard_input.pressed(KeyCode::Down) || keyboard_input.pressed(KeyCode::I) {
+            direction = Some(Down);
+        }
+        if keyboard_input.pressed(KeyCode::Left) || keyboard_input.pressed(KeyCode::U) {
+            direction = Some(Left);
+        }
+        if keyboard_input.pressed(KeyCode::Right) || keyboard_input.pressed(KeyCode::E) {
+            direction = Some(Right);
+        }
+
+        if let Some(direction) = direction {
+            player_input.push(direction);
+        }
     }
 }
 

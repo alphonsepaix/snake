@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 
-use crate::{game_logic::WallLocation, get_window_resolution, WALL_THICKNESS};
+use crate::{game_logic::WallLocation, get_window_resolution};
 
 #[derive(Clone, Copy, Default, Eq, PartialEq, Debug, Hash, States)]
 pub enum GameState {
@@ -86,22 +86,29 @@ pub mod game {
     use crate::*;
     use bevy::prelude::*;
 
+    #[derive(Clone, Copy, Default, Eq, PartialEq, Debug, Hash, States)]
+    pub enum GameMode {
+        #[default]
+        Running,
+        Pause,
+    }
+
     pub struct GamePlugin;
 
     impl Plugin for GamePlugin {
         fn build(&self, app: &mut App) {
-            app.add_systems(OnEnter(GameState::Game), game_setup)
+            app.add_state::<GameMode>()
+                .add_systems(OnEnter(GameState::Game), game_setup)
+                .add_systems(Update, handle_input.run_if(in_state(GameState::Game)))
                 .add_systems(
                     FixedUpdate,
-                    (
-                        handle_input,
-                        move_snake,
-                        check_for_collisions,
-                        update_scoreboard,
-                    )
+                    (move_snake, check_for_collisions, update_scoreboard)
                         .chain()
-                        .run_if(in_state(GameState::Game)),
+                        .run_if(in_state(GameState::Game))
+                        .run_if(in_state(GameMode::Running)),
                 )
+                .add_systems(OnEnter(GameMode::Pause), pause_setup)
+                .add_systems(OnExit(GameMode::Pause), despawn_screen::<OnPauseScreen>)
                 .add_systems(
                     OnExit(GameState::Game),
                     (despawn_screen::<OnGameScreen>, reset_state),
@@ -211,6 +218,43 @@ pub mod game {
         snake_body.clear();
         player_input.0 = vec![];
         timer.reset();
+    }
+
+    #[derive(Component)]
+    pub struct OnPauseScreen;
+
+    pub fn pause_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
+        commands
+            .spawn((
+                NodeBundle {
+                    style: Style {
+                        width: Val::Percent(100.0),
+                        height: Val::Percent(50.0),
+                        justify_content: JustifyContent::Center,
+                        align_items: AlignItems::End,
+                        ..default()
+                    },
+                    ..default()
+                },
+                OnPauseScreen,
+            ))
+            .with_children(|parent| {
+                parent.spawn(TextBundle::from_sections([
+                    TextSection::new(
+                        "Pause".to_uppercase(),
+                        TextStyle {
+                            font_size: SCOREBOARD_FONT_SIZE,
+                            color: TEXT_COLOR,
+                            font: asset_server.load("font.ttf"),
+                        },
+                    ),
+                    TextSection::from_style(TextStyle {
+                        font_size: SCOREBOARD_FONT_SIZE,
+                        color: TEXT_COLOR,
+                        ..default()
+                    }),
+                ]));
+            });
     }
 }
 
@@ -516,5 +560,5 @@ fn despawn_screen<T: Component>(to_despawn: Query<Entity, With<T>>, mut commands
 fn get_scoreboard_position() -> f32 {
     let window_height = get_window_resolution().1;
     let top_wall_height = WallLocation::position(&WallLocation::Top).y;
-    window_height / 2.0 - top_wall_height - WALL_THICKNESS
+    window_height / 2.0 - top_wall_height - 10.0
 }
