@@ -31,7 +31,7 @@ fn main() {
         .add_event::<GameEvent>()
         .insert_resource(AlreadyPlayed(false))
         .insert_resource(Scoreboard { value: 0 })
-        .insert_resource(PlayerInput(None))
+        .insert_resource(PlayerInput(vec![]))
         .insert_resource(SnakeBody { body: vec![] })
         .insert_resource(ClearColor(BACKGROUND_COLOR))
         .insert_resource(GameTimer(Timer::from_seconds(

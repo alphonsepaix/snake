@@ -209,7 +209,7 @@ pub mod game {
     ) {
         scoreboard.value = 0;
         snake_body.clear();
-        player_input.0 = None;
+        player_input.0 = vec![];
         timer.reset();
     }
 }

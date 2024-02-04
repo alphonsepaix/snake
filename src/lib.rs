@@ -56,8 +56,8 @@ pub fn handle_input(keyboard_input: Res<Input<KeyCode>>, mut player_input: ResMu
         direction = Some(Right);
     }
 
-    if direction.is_some() {
-        player_input.0 = direction;
+    if let Some(direction) = direction {
+        player_input.push(direction);
     }
 }
 

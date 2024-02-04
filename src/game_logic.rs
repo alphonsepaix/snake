@@ -45,7 +45,7 @@ impl DerefMut for SnakeBody {
 }
 
 #[derive(Deref, DerefMut, Resource)]
-pub struct PlayerInput(pub Option<SnakeDirection>);
+pub struct PlayerInput(pub Vec<SnakeDirection>);
 
 #[derive(Component)]
 pub struct Tail;
@@ -186,7 +186,7 @@ pub fn check_for_collisions(
 pub fn move_snake(
     time: Res<Time>,
     mut timer: ResMut<GameTimer>,
-    player_input: Res<PlayerInput>,
+    mut player_input: ResMut<PlayerInput>,
     body: Res<SnakeBody>,
     mut head: Query<(&mut Transform, &mut Movement), With<Head>>,
     mut tail: Query<(&mut Transform, &Movement), (With<Tail>, Without<Head>)>,
@@ -194,13 +194,17 @@ pub fn move_snake(
     let (mut snake_transform, mut snake_velocity) = head.single_mut();
 
     if timer.tick(time.delta()).just_finished() {
-        if let Some(next_direction) = player_input.0 {
-            use SnakeDirection::*;
+        use SnakeDirection::*;
+        for next_direction in player_input.iter().rev() {
             match (snake_velocity.0, next_direction) {
-                (Left, Right) | (Right, Left) | (Up, Down) | (Down, Up) => (),
-                _ => snake_velocity.0 = next_direction,
+                (Left, Right) | (Right, Left) | (Up, Down) | (Down, Up) => continue,
+                _ => {
+                    snake_velocity.0 = *next_direction;
+                    break;
+                }
             }
         }
+        player_input.clear();
         // For each body segment, set the transform of one segment to match the transform
         // of the segment above
         if !body.is_empty() {
