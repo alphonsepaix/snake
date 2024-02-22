@@ -1,8 +1,10 @@
-# snake-rs
+# Snake
 
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
-A simple snake game written in Rust with the Bevy engine.
+The snake game written with the Bevy engine.
+
+![Gameplay](gameplay.gif)
 
 ## Licenses
 

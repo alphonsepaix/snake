@@ -1,4 +1,4 @@
-use crate::game_logic::SnakeDirection;
+use crate::logic::SnakeDirection;
 use bevy::prelude::*;
 
 pub const WALL_THICKNESS: f32 = 5.0;

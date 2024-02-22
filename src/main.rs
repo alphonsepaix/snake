@@ -1,6 +1,6 @@
 use bevy::{prelude::*, window::WindowTheme};
 use snake::constants::*;
-use snake::game_logic::*;
+use snake::logic::*;
 use snake::ui::results::ResultsTimer;
 use snake::ui::*;
 use snake::*;

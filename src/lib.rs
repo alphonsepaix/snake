@@ -1,10 +1,10 @@
 pub mod constants;
-pub mod game_logic;
+pub mod logic;
 pub mod ui;
 
 use bevy::{prelude::*, winit::WinitWindows};
 use constants::*;
-use game_logic::{PlayerInput, Scoreboard, SnakeDirection};
+use logic::{PlayerInput, Scoreboard, SnakeDirection};
 use winit::window::Icon;
 
 use crate::ui::game::GameMode;

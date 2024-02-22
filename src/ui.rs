@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 
-use crate::{game_logic::WallLocation, get_window_resolution};
+use crate::{get_window_resolution, logic::WallLocation};
 
 #[derive(Clone, Copy, Default, Eq, PartialEq, Debug, Hash, States)]
 pub enum GameState {
@@ -82,7 +82,7 @@ pub mod game {
     use super::get_scoreboard_position;
     use super::GameState;
     use crate::constants::*;
-    use crate::game_logic::*;
+    use crate::logic::*;
     use crate::*;
     use bevy::prelude::*;
 
@@ -444,7 +444,7 @@ pub mod menu {
 
 pub mod results {
     use super::{despawn_screen, GameState};
-    use crate::{constants::RESULTS_TEXT_SIZE, game_logic::GameEvent};
+    use crate::{constants::RESULTS_TEXT_SIZE, logic::GameEvent};
     use bevy::prelude::*;
 
     pub struct ResultsPlugin;
