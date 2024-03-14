@@ -17,6 +17,7 @@ fn main() {
                     maximize: false,
                     ..default()
                 },
+                visible: false,
                 ..default()
             }),
             ..default()
@@ -43,6 +44,6 @@ fn main() {
             TimerMode::Repeating,
         )))
         .add_systems(Startup, (set_window_icon, setup).chain())
-        .add_systems(Update, bevy::window::close_on_esc)
+        .add_systems(Update, (make_visible, bevy::window::close_on_esc))
         .run();
 }

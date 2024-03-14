@@ -2,7 +2,7 @@ pub mod constants;
 pub mod logic;
 pub mod ui;
 
-use bevy::{prelude::*, winit::WinitWindows};
+use bevy::{core::FrameCount, prelude::*, winit::WinitWindows};
 use constants::*;
 use logic::{PlayerInput, Scoreboard, SnakeDirection};
 use winit::window::Icon;
@@ -109,4 +109,10 @@ pub fn get_window_resolution() -> (f32, f32) {
         (GRID_HEIGHT as f32 + 2.0) * TILE_SIZE.y + WINDOW_PADDING * 2.0,
     );
     (width.max(MENU_WIDTH), height.max(MENU_HEIGHT))
+}
+
+pub fn make_visible(mut window: Query<&mut Window>, frames: Res<FrameCount>) {
+    if frames.0 == WINDOW_VISIBLE_DELAY {
+        window.single_mut().visible = true;
+    }
 }

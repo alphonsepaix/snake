@@ -40,3 +40,5 @@ pub const NORMAL_BUTTON: Color = Color::rgb(0.25, 0.25, 0.25);
 pub const HOVERED_BUTTON: Color = Color::rgb(0.35, 0.35, 0.35);
 pub const HOVERED_PRESSED_BUTTON: Color = Color::rgb(0.35, 0.75, 0.35);
 pub const PRESSED_BUTTON: Color = Color::rgb(0.45, 0.85, 0.45);
+
+pub const WINDOW_VISIBLE_DELAY: u32 = 3;

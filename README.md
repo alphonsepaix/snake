@@ -6,6 +6,10 @@ The snake game written with the Bevy engine.
 
 ![Gameplay](gameplay.gif)
 
+## Controls
+
+Use the arrow keys (`↑`, `↓`, `←`, `→`) to move around. Press `␣` to pause/unpause the game and `Esc` to exit.
+
 ## Licenses
 
 ### Code
@@ -14,11 +18,13 @@ The code in this repository is licensed under the [MIT License](LICENSE).
 
 ### Image
 
-The [game icon](assets/icon.png) was generated with Image Creator from Microsoft Designer and may be used for non-commercial purposes.
+The game icon can be found [here](https://www.flaticon.com/free-icons/wildlife).
 
 ### Music
 
-[Retro Arcade](https://freemusicarchive.org/music/beat-mekanik/single/retro-arcade) by Beat Mekanik is licensed under a [Attribution 4.0 International License](https://creativecommons.org/licenses/by/4.0/). 
+"Retro Arcade" by Beat Mekanik is licensed under
+an [Attribution 4.0 International License](https://creativecommons.org/licenses/by/4.0/). You can find
+it [here](https://freemusicarchive.org/music/beat-mekanik/single/retro-arcade).
 
 ### Sounds
 
